@@ -13,7 +13,7 @@ function saveApiKey() {
     if (apiKey) {
         document.getElementById('api-key-input').classList.add('hidden');
         document.getElementById('review-section').classList.remove('hidden');
-        document.getElementById('result').innerText = "API Key saved. You can now use the review feature.";
+        document.getElementById('result').innerText = "API Key now saved. You can now use the review feature.";
     } else {
         document.getElementById('result').innerText = "Please enter a valid API Key.";
     }
