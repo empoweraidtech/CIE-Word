@@ -4,6 +4,7 @@ Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
         document.getElementById('save-key').onclick = saveApiKey;
         document.getElementById('run').onclick = run;
+        document.getElementById('copy-alternative').onclick = copyAlternative;
     }
 });
 
@@ -36,16 +37,17 @@ async function run() {
             
             // Show loading indicator
             document.getElementById('loader').classList.remove('hidden');
-            document.getElementById('result').innerHTML = '';
+            document.getElementById('result').classList.add('hidden');
             
             const reviewMode = document.getElementById('review-mode').value;
             const review = await reviewParagraph(selectedText, reviewMode);
             
             // Hide loading indicator
             document.getElementById('loader').classList.add('hidden');
+            document.getElementById('result').classList.remove('hidden');
             
             // Display the review in the sidebar
-            document.getElementById('result').innerHTML = review;
+            displayReview(review);
         });
     } catch (error) {
         document.getElementById('result').innerHTML = `Error: ${error.message}`;
@@ -60,24 +62,18 @@ async function reviewParagraph(text, mode) {
         azureEndpoint: 'https://cieuk1.openai.azure.com',
     };
     
-    let prompt;
-    switch (mode) {
-        case 'general':
-            prompt = `Review the following paragraph from a policy document against Ofsted's SCIFF framework for Outstanding:
-            Paragraph: "${text}"
-            Provide a general review and suggestions for improvement.`;
-            break;
-        case 'improvement':
-            prompt = `Review the following paragraph from a policy document against Ofsted's SCIFF framework for Outstanding:
-            Paragraph: "${text}"
-            Focus on areas for improvement and provide specific suggestions.`;
-            break;
-        case 'alignment':
-            prompt = `Review the following paragraph from a policy document against Ofsted's SCIFF framework for Outstanding:
-            Paragraph: "${text}"
-            Analyze how well this paragraph aligns with the SCIFF framework and suggest any necessary adjustments.`;
-            break;
+    const prompt = `Review the following paragraph from a policy document against Ofsted's SCIFF framework for Outstanding:
+    Paragraph: "${text}"
+    
+    Provide a response in the following JSON format, without enclosing it in triple backticks:
+    {
+        "summary": "A brief summary of the review",
+        "explanation": "An in-depth explanation of how the paragraph aligns with the SCIFF framework",
+        "changes": "Suggested changes to improve the paragraph",
+        "alternative": "A proposed alternative paragraph incorporating the suggested changes"
     }
+    
+    Focus on the ${mode} aspect in your review.`;
     
     try {
         const response = await axios.post(
@@ -94,9 +90,32 @@ async function reviewParagraph(text, mode) {
                 }
             }
         );
-        return response.data.choices[0].message.content;
+        return JSON.parse(response.data.choices[0].message.content);
     } catch (error) {
         console.error("Error calling OpenAI API:", error);
-        return "An error occurred while reviewing the paragraph. Please check your API key and try again.";
+        return {
+            summary: "An error occurred while reviewing the paragraph.",
+            explanation: "Please check your API key and try again.",
+            changes: "",
+            alternative: ""
+        };
     }
+}
+
+function displayReview(review) {
+    document.getElementById('summary').innerHTML = `<p class="font-bold"><i class="fas fa-info-circle mr-2"></i>Summary:</p><p>${review.summary}</p>`;
+    document.getElementById('explanation').innerHTML = review.explanation;
+    document.getElementById('changes').innerHTML = review.changes;
+    document.getElementById('alternative').innerHTML = review.alternative;
+}
+
+function copyAlternative() {
+    const alternativeText = document.getElementById('alternative').innerText;
+    navigator.clipboard.writeText(alternativeText).then(() => {
+        const copyButton = document.getElementById('copy-alternative');
+        copyButton.innerHTML = '<i class="fas fa-check mr-2"></i>Copied!';
+        setTimeout(() => {
+            copyButton.innerHTML = '<i class="fas fa-copy mr-2"></i>Copy to Clipboard';
+        }, 2000);
+    });
 }
