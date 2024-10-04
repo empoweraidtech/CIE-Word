@@ -1,7 +1,7 @@
 let apiKey = '';
 
-// Last updated: 2023-10-04 18:30:00 UTC
-const lastUpdated = "2023-10-04 18:30:00 UTC";
+// Last updated: 2023-10-04 20:00:00 UTC
+const lastUpdated = "2023-10-04 20:00:00 UTC";
 
 Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
@@ -9,8 +9,24 @@ Office.onReady((info) => {
         document.getElementById('run').onclick = run;
         document.getElementById('copy-alternative').onclick = copyToClipboard;
         document.getElementById('last-updated').textContent = `Last updated: ${lastUpdated}`;
+        setupCollapsibles();
     }
 });
+
+function setupCollapsibles() {
+    var coll = document.getElementsByClassName("collapsible");
+    for (var i = 0; i < coll.length; i++) {
+        coll[i].addEventListener("click", function() {
+            this.classList.toggle("active");
+            var content = this.nextElementSibling;
+            if (content.style.display === "block") {
+                content.style.display = "none";
+            } else {
+                content.style.display = "block";
+            }
+        });
+    }
+}
 
 function saveApiKey() {
     apiKey = document.getElementById('api-key').value;
@@ -151,33 +167,37 @@ function displayReview(review) {
 
     if (visualizationEl) {
         visualizationEl.innerHTML = `
-            <h3 class="font-bold mb-2">Visualization</h3>
-            <div class="flex flex-col space-y-2">
-                <div><span class="flag ${review.visualization.ofstedOutstanding.score}"></span> Ofsted Outstanding: ${review.visualization.ofstedOutstanding.reason}</div>
-                <div><span class="flag ${review.visualization.tristonePolicy.score}"></span> Tristone Policy: ${review.visualization.tristonePolicy.reason}</div>
-                <div><span class="flag ${review.visualization.readability.score}"></span> Readability: ${review.visualization.readability.reason}</div>
+            <div class="flex justify-between">
+                <div class="tooltip">
+                    <span class="flag ${review.visualization.ofstedOutstanding.score}"></span> Ofsted Outstanding
+                    <span class="tooltiptext">${review.visualization.ofstedOutstanding.reason}</span>
+                </div>
+                <div class="tooltip">
+                    <span class="flag ${review.visualization.tristonePolicy.score}"></span> Tristone Policy
+                    <span class="tooltiptext">${review.visualization.tristonePolicy.reason}</span>
+                </div>
+                <div class="tooltip">
+                    <span class="flag ${review.visualization.readability.score}"></span> Readability
+                    <span class="tooltiptext">${review.visualization.readability.reason}</span>
+                </div>
             </div>
         `;
     }
 
     if (summaryEl) {
-        summaryEl.innerHTML = marked.parse(`### <i class="fas fa-info-circle text-blue-500 mr-2"></i>Summary\n\n${review.summary}`);
+        summaryEl.innerHTML = marked.parse(review.summary);
     }
     
     if (changesEl) {
-        changesEl.innerHTML = marked.parse(`### <i class="fas fa-edit text-yellow-500 mr-2"></i>Suggested Changes\n\n${review.suggestedChanges.map(change => `- ${change}`).join('\n')}`);
+        changesEl.innerHTML = marked.parse(review.suggestedChanges.map(change => `- ${change}`).join('\n'));
     }
     
     if (alternativeEl) {
-        alternativeEl.innerHTML = marked.parse(`### <i class="fas fa-file-alt text-green-500 mr-2"></i>Proposed Alternative\n\n${review.proposedAlternative}`);
+        alternativeEl.innerHTML = marked.parse(review.proposedAlternative);
     }
     
     if (copyButton) {
-        if (review.proposedAlternative) {
-            copyButton.classList.remove('hidden');
-        } else {
-            copyButton.classList.add('hidden');
-        }
+        copyButton.classList.remove('hidden');
     }
 }
 
