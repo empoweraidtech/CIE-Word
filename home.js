@@ -1,7 +1,7 @@
 let apiKey = '';
 
-// Last updated: 2023-10-04 21:30:00 UTC
-const lastUpdated = "2023-10-04 21:30:00 UTC";
+// Last updated: 2023-10-04 22:30:00 UTC
+const lastUpdated = "2023-10-04 22:30:00 UTC";
 
 Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
@@ -173,7 +173,7 @@ function displayReview(review) {
     copyButton.className = 'bg-blue-500 text-white p-2 rounded hover:bg-blue-600 mt-2';
     copyButton.innerHTML = '<i class="fas fa-copy mr-2"></i>Copy to Clipboard';
     copyButton.onclick = copyToClipboard;
-    alternativeSection.querySelector('.content').appendChild(copyButton);
+    alternativeSection.appendChild(copyButton);
 
     // Setup collapsible functionality
     setupCollapsibles();
@@ -197,11 +197,7 @@ function setupCollapsibles() {
         coll[i].addEventListener("click", function() {
             this.classList.toggle("active");
             var content = this.nextElementSibling;
-            if (content.style.maxHeight) {
-                content.style.maxHeight = null;
-            } else {
-                content.style.maxHeight = content.scrollHeight + "px";
-            }
+            content.classList.toggle("show");
         });
     }
 }
