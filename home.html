@@ -8,10 +8,9 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="home.js" type="text/javascript"></script>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         .hidden { display: none; }
-        #result h3 { margin-top: 15px; margin-bottom: 5px; }
-        #result p { margin-top: 0; }
         .loader {
             border: 5px solid #f3f3f3;
             border-top: 5px solid #3498db;
@@ -24,6 +23,11 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
     </style>
 </head>
 <body class="bg-gray-100 p-4">
@@ -31,7 +35,9 @@
         <h2 class="text-2xl font-bold mb-2">Ofsted SCIFF Review</h2>
         <p class="mb-2">Please enter your OpenAI API Key:</p>
         <input type="password" id="api-key" placeholder="Enter API Key" class="w-full p-2 mb-2 border rounded">
-        <button id="save-key" class="bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Save Key</button>
+        <button id="save-key" class="bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
+            <i class="fas fa-save mr-2"></i>Save Key
+        </button>
     </div>
     <div id="review-section" class="hidden">
         <h2 class="text-2xl font-bold mb-2">Ofsted SCIFF Review</h2>
@@ -41,9 +47,58 @@
             <option value="improvement">Areas for Improvement</option>
             <option value="alignment">SCIFF Alignment Check</option>
         </select>
-        <button id="run" class="bg-green-500 text-white p-2 rounded hover:bg-green-600 mb-4">Review Selected Paragraph</button>
-        <div id="loader" class="loader hidden mb-4"></div>
-        <div id="result" class="bg-white p-4 rounded shadow"></div>
+        <button id="run" class="bg-green-500 text-white p-2 rounded hover:bg-green-600 mb-4">
+            <i class="fas fa-search mr-2"></i>Review Selected Paragraph
+        </button>
+        <div id="loader" class="loader hidden mb-4 mx-auto"></div>
+        <div id="result" class="bg-white p-4 rounded shadow">
+            <div id="summary" class="mb-4"></div>
+            
+            <div class="accordion mb-4">
+                <button class="accordion-header w-full text-left p-2 bg-gray-200 rounded">
+                    <i class="fas fa-chevron-down mr-2"></i>In-depth Explanation
+                </button>
+                <div class="accordion-content p-2 bg-gray-100 rounded-b">
+                    <div id="explanation"></div>
+                </div>
+            </div>
+            
+            <div class="accordion mb-4">
+                <button class="accordion-header w-full text-left p-2 bg-gray-200 rounded">
+                    <i class="fas fa-chevron-down mr-2"></i>Suggested Changes
+                </button>
+                <div class="accordion-content p-2 bg-gray-100 rounded-b">
+                    <div id="changes"></div>
+                </div>
+            </div>
+            
+            <div class="accordion mb-4">
+                <button class="accordion-header w-full text-left p-2 bg-gray-200 rounded">
+                    <i class="fas fa-chevron-down mr-2"></i>Proposed Alternative
+                </button>
+                <div class="accordion-content p-2 bg-gray-100 rounded-b">
+                    <div id="alternative"></div>
+                    <button id="copy-alternative" class="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 mt-2">
+                        <i class="fas fa-copy mr-2"></i>Copy to Clipboard
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
+    <script>
+        // Accordion functionality
+        document.querySelectorAll('.accordion-header').forEach(button => {
+            button.addEventListener('click', () => {
+                const content = button.nextElementSibling;
+                button.querySelector('i').classList.toggle('fa-chevron-down');
+                button.querySelector('i').classList.toggle('fa-chevron-up');
+                if (content.style.maxHeight) {
+                    content.style.maxHeight = null;
+                } else {
+                    content.style.maxHeight = content.scrollHeight + "px";
+                }
+            });
+        });
+    </script>
 </body>
 </html>
