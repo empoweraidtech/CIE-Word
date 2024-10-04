@@ -31,8 +31,13 @@
     </style>
 </head>
 <body class="bg-gray-100 p-4">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold">Ofsted SCIFF Review</h2>
+        <button id="refresh-code" class="bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
+            <i class="fas fa-sync-alt mr-2"></i>Refresh Code
+        </button>
+    </div>
     <div id="api-key-input" class="mb-4">
-        <h2 class="text-2xl font-bold mb-2">Ofsted SCIFF Review</h2>
         <p class="mb-2">Please enter your OpenAI API Key:</p>
         <input type="password" id="api-key" placeholder="Enter API Key" class="w-full p-2 mb-2 border rounded">
         <button id="save-key" class="bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
