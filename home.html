@@ -26,6 +26,10 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .flag { width: 20px; height: 20px; display: inline-block; border-radius: 50%; margin-right: 5px; }
+        .red { background-color: #ff4d4d; }
+        .amber { background-color: #ffad33; }
+        .green { background-color: #4CAF50; }
     </style>
 </head>
 <body class="bg-gray-100 p-4">
@@ -50,6 +54,7 @@
         </button>
         <div id="loader" class="loader hidden mb-4"></div>
         <div id="result" class="bg-white p-4 rounded shadow">
+            <div id="visualization" class="mb-4"></div>
             <div id="summary" class="mb-4"></div>
             <div id="suggested-changes" class="mb-4"></div>
             <div id="proposed-alternative" class="mb-4"></div>
