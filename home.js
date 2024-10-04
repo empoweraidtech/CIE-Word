@@ -1,7 +1,7 @@
 let apiKey = '';
 
-// Last updated: 2023-10-04 15:30:00 UTC
-const lastUpdated = "2023-10-04 15:30:00 UTC";
+// Last updated: 2023-10-04 17:39:00 UTC
+const lastUpdated = "2023-10-04 16:45:00 UTC";
 
 Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
@@ -17,15 +17,15 @@ function saveApiKey() {
     if (apiKey) {
         document.getElementById('api-key-input').classList.add('hidden');
         document.getElementById('review-section').classList.remove('hidden');
-        document.getElementById('result').innerHTML = "<p><i class='fas fa-check-circle text-green-500 mr-2'></i>API Key saved. You can now use the review feature.</p>";
+        setResult("<p><i class='fas fa-check-circle text-green-500 mr-2'></i>API Key saved. You can now use the review feature.</p>");
     } else {
-        document.getElementById('result').innerHTML = "<p><i class='fas fa-exclamation-triangle text-yellow-500 mr-2'></i>Please enter a valid API Key.</p>";
+        setResult("<p><i class='fas fa-exclamation-triangle text-yellow-500 mr-2'></i>Please enter a valid API Key.</p>");
     }
 }
 
 async function run() {
     if (!apiKey) {
-        document.getElementById('result').innerHTML = "<p><i class='fas fa-exclamation-circle text-red-500 mr-2'></i>Please enter your API Key first.</p>";
+        setResult("<p><i class='fas fa-exclamation-circle text-red-500 mr-2'></i>Please enter your API Key first.</p>");
         return;
     }
     try {
@@ -35,13 +35,16 @@ async function run() {
             await context.sync();
             const selectedText = selection.text;
             if (!selectedText) {
-                document.getElementById('result').innerHTML = "<p><i class='fas fa-exclamation-circle text-red-500 mr-2'></i>No text selected. Please select a paragraph to review.</p>";
+                setResult("<p><i class='fas fa-exclamation-circle text-red-500 mr-2'></i>No text selected. Please select a paragraph to review.</p>");
                 return;
             }
             
+            // Prepare the result area
+            setResult('');
+            ensureResultElements();
+            
             // Show loading indicator
             document.getElementById('loader').classList.remove('hidden');
-            document.getElementById('result').innerHTML = '';
             
             const reviewMode = document.getElementById('review-mode').value;
             const review = await reviewParagraph(selectedText, reviewMode);
@@ -53,7 +56,28 @@ async function run() {
             displayReview(review);
         });
     } catch (error) {
-        document.getElementById('result').innerHTML = `<p><i class='fas fa-exclamation-circle text-red-500 mr-2'></i>Error: ${error.message}</p>`;
+        setResult(`<p><i class='fas fa-exclamation-circle text-red-500 mr-2'></i>Error: ${error.message}</p>`);
+    }
+}
+
+function ensureResultElements() {
+    const resultEl = document.getElementById('result');
+    if (!resultEl) return;
+
+    ['summary', 'suggested-changes', 'proposed-alternative'].forEach(id => {
+        if (!document.getElementById(id)) {
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = 'mb-4';
+            resultEl.appendChild(div);
+        }
+    });
+}
+
+function setResult(html) {
+    const resultEl = document.getElementById('result');
+    if (resultEl) {
+        resultEl.innerHTML = html;
     }
 }
 
@@ -114,26 +138,39 @@ function displayReview(review) {
     const alternativeEl = document.getElementById('proposed-alternative');
     const copyButton = document.getElementById('copy-alternative');
 
-    summaryEl.innerHTML = marked.parse(`### <i class="fas fa-info-circle text-blue-500 mr-2"></i>Summary\n\n${review.summary}`);
+    if (summaryEl) {
+        summaryEl.innerHTML = marked.parse(`### <i class="fas fa-info-circle text-blue-500 mr-2"></i>Summary\n\n${review.summary}`);
+    }
     
-    changesEl.innerHTML = marked.parse(`### <i class="fas fa-edit text-yellow-500 mr-2"></i>Suggested Changes\n\n${review.suggestedChanges.map(change => `- ${change}`).join('\n')}`);
+    if (changesEl) {
+        changesEl.innerHTML = marked.parse(`### <i class="fas fa-edit text-yellow-500 mr-2"></i>Suggested Changes\n\n${review.suggestedChanges.map(change => `- ${change}`).join('\n')}`);
+    }
     
-    alternativeEl.innerHTML = marked.parse(`### <i class="fas fa-file-alt text-green-500 mr-2"></i>Proposed Alternative\n\n${review.proposedAlternative}`);
+    if (alternativeEl) {
+        alternativeEl.innerHTML = marked.parse(`### <i class="fas fa-file-alt text-green-500 mr-2"></i>Proposed Alternative\n\n${review.proposedAlternative}`);
+    }
     
-    if (review.proposedAlternative) {
-        copyButton.classList.remove('hidden');
-    } else {
-        copyButton.classList.add('hidden');
+    if (copyButton) {
+        if (review.proposedAlternative) {
+            copyButton.classList.remove('hidden');
+        } else {
+            copyButton.classList.add('hidden');
+        }
     }
 }
 
 function copyToClipboard() {
-    const alternativeText = document.getElementById('proposed-alternative').textContent;
-    navigator.clipboard.writeText(alternativeText).then(() => {
-        const copyButton = document.getElementById('copy-alternative');
-        copyButton.innerHTML = '<i class="fas fa-check mr-2"></i>Copied!';
-        setTimeout(() => {
-            copyButton.innerHTML = '<i class="fas fa-copy mr-2"></i>Copy to Clipboard';
-        }, 2000);
-    });
+    const alternativeEl = document.getElementById('proposed-alternative');
+    if (alternativeEl) {
+        const alternativeText = alternativeEl.textContent;
+        navigator.clipboard.writeText(alternativeText).then(() => {
+            const copyButton = document.getElementById('copy-alternative');
+            if (copyButton) {
+                copyButton.innerHTML = '<i class="fas fa-check mr-2"></i>Copied!';
+                setTimeout(() => {
+                    copyButton.innerHTML = '<i class="fas fa-copy mr-2"></i>Copy to Clipboard';
+                }, 2000);
+            }
+        });
+    }
 }
