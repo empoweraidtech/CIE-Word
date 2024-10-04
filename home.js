@@ -2,26 +2,40 @@ let apiKey = '';
 
 Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
-        document.getElementById('save-key').onclick = saveApiKey;
-        document.getElementById('run').onclick = run;
-        document.getElementById('copy-alternative').onclick = copyAlternative;
+        const saveKeyButton = document.getElementById('save-key');
+        const runButton = document.getElementById('run');
+        const copyAlternativeButton = document.getElementById('copy-alternative');
+
+        if (saveKeyButton) saveKeyButton.onclick = saveApiKey;
+        if (runButton) runButton.onclick = run;
+        if (copyAlternativeButton) copyAlternativeButton.onclick = copyAlternative;
     }
 });
 
 function saveApiKey() {
-    apiKey = document.getElementById('api-key').value;
+    const apiKeyInput = document.getElementById('api-key');
+    const apiKeyInputSection = document.getElementById('api-key-input');
+    const reviewSection = document.getElementById('review-section');
+    const resultDiv = document.getElementById('result');
+
+    if (apiKeyInput) apiKey = apiKeyInput.value;
+    
     if (apiKey) {
-        document.getElementById('api-key-input').classList.add('hidden');
-        document.getElementById('review-section').classList.remove('hidden');
-        document.getElementById('result').innerHTML = "API Key saved. You can now use the review feature.";
+        if (apiKeyInputSection) apiKeyInputSection.classList.add('hidden');
+        if (reviewSection) reviewSection.classList.remove('hidden');
+        if (resultDiv) resultDiv.innerHTML = "API Key saved. You can now use the review feature.";
     } else {
-        document.getElementById('result').innerHTML = "Please enter a valid API Key.";
+        if (resultDiv) resultDiv.innerHTML = "Please enter a valid API Key.";
     }
 }
 
 async function run() {
+    const resultDiv = document.getElementById('result');
+    const loaderDiv = document.getElementById('loader');
+    const reviewModeSelect = document.getElementById('review-mode');
+
     if (!apiKey) {
-        document.getElementById('result').innerHTML = "Please enter your API Key first.";
+        if (resultDiv) resultDiv.innerHTML = "Please enter your API Key first.";
         return;
     }
     try {
@@ -31,26 +45,26 @@ async function run() {
             await context.sync();
             const selectedText = selection.text;
             if (!selectedText) {
-                document.getElementById('result').innerHTML = "No text selected. Please select a paragraph to review.";
+                if (resultDiv) resultDiv.innerHTML = "No text selected. Please select a paragraph to review.";
                 return;
             }
             
             // Show loading indicator
-            document.getElementById('loader').classList.remove('hidden');
-            document.getElementById('result').classList.add('hidden');
+            if (loaderDiv) loaderDiv.classList.remove('hidden');
+            if (resultDiv) resultDiv.classList.add('hidden');
             
-            const reviewMode = document.getElementById('review-mode').value;
+            const reviewMode = reviewModeSelect ? reviewModeSelect.value : 'general';
             const review = await reviewParagraph(selectedText, reviewMode);
             
             // Hide loading indicator
-            document.getElementById('loader').classList.add('hidden');
-            document.getElementById('result').classList.remove('hidden');
+            if (loaderDiv) loaderDiv.classList.add('hidden');
+            if (resultDiv) resultDiv.classList.remove('hidden');
             
             // Display the review in the sidebar
             displayReview(review);
         });
     } catch (error) {
-        document.getElementById('result').innerHTML = `Error: ${error.message}`;
+        if (resultDiv) resultDiv.innerHTML = `Error: ${error.message}`;
     }
 }
 
@@ -103,19 +117,28 @@ async function reviewParagraph(text, mode) {
 }
 
 function displayReview(review) {
-    document.getElementById('summary').innerHTML = `<p class="font-bold"><i class="fas fa-info-circle mr-2"></i>Summary:</p><p>${review.summary}</p>`;
-    document.getElementById('explanation').innerHTML = review.explanation;
-    document.getElementById('changes').innerHTML = review.changes;
-    document.getElementById('alternative').innerHTML = review.alternative;
+    const summaryDiv = document.getElementById('summary');
+    const explanationDiv = document.getElementById('explanation');
+    const changesDiv = document.getElementById('changes');
+    const alternativeDiv = document.getElementById('alternative');
+
+    if (summaryDiv) summaryDiv.innerHTML = `<p class="font-bold"><i class="fas fa-info-circle mr-2"></i>Summary:</p><p>${review.summary}</p>`;
+    if (explanationDiv) explanationDiv.innerHTML = review.explanation;
+    if (changesDiv) changesDiv.innerHTML = review.changes;
+    if (alternativeDiv) alternativeDiv.innerHTML = review.alternative;
 }
 
 function copyAlternative() {
-    const alternativeText = document.getElementById('alternative').innerText;
-    navigator.clipboard.writeText(alternativeText).then(() => {
-        const copyButton = document.getElementById('copy-alternative');
-        copyButton.innerHTML = '<i class="fas fa-check mr-2"></i>Copied!';
-        setTimeout(() => {
-            copyButton.innerHTML = '<i class="fas fa-copy mr-2"></i>Copy to Clipboard';
-        }, 2000);
-    });
+    const alternativeDiv = document.getElementById('alternative');
+    const copyButton = document.getElementById('copy-alternative');
+
+    if (alternativeDiv && copyButton) {
+        const alternativeText = alternativeDiv.innerText;
+        navigator.clipboard.writeText(alternativeText).then(() => {
+            copyButton.innerHTML = '<i class="fas fa-check mr-2"></i>Copied!';
+            setTimeout(() => {
+                copyButton.innerHTML = '<i class="fas fa-copy mr-2"></i>Copy to Clipboard';
+            }, 2000);
+        });
+    }
 }
