@@ -5,12 +5,34 @@ Office.onReady((info) => {
         const saveKeyButton = document.getElementById('save-key');
         const runButton = document.getElementById('run');
         const copyAlternativeButton = document.getElementById('copy-alternative');
+        const refreshCodeButton = document.getElementById('refresh-code');
 
         if (saveKeyButton) saveKeyButton.onclick = saveApiKey;
         if (runButton) runButton.onclick = run;
         if (copyAlternativeButton) copyAlternativeButton.onclick = copyAlternative;
+        if (refreshCodeButton) refreshCodeButton.onclick = refreshCode;
     }
 });
+
+function refreshCode() {
+    const scriptElement = document.querySelector('script[src="home.js"]');
+    if (scriptElement) {
+        const newScriptElement = document.createElement('script');
+        newScriptElement.src = `home.js?v=${new Date().getTime()}`;
+        scriptElement.parentNode.replaceChild(newScriptElement, scriptElement);
+        
+        // Show a message to the user
+        const resultDiv = document.getElementById('result');
+        if (resultDiv) {
+            resultDiv.innerHTML = "Code refreshed. Please wait a moment and try your operation again.";
+        }
+        
+        // Reload the page after a short delay
+        setTimeout(() => {
+            location.reload();
+        }, 2000);
+    }
+}
 
 function saveApiKey() {
     const apiKeyInput = document.getElementById('api-key');
