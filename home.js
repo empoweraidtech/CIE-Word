@@ -1,32 +1,15 @@
 let apiKey = '';
 
-// Last updated: 2023-10-04 20:00:00 UTC
-const lastUpdated = "2023-10-04 20:00:00 UTC";
+// Last updated: 2023-10-04 21:30:00 UTC
+const lastUpdated = "2023-10-04 21:30:00 UTC";
 
 Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
         document.getElementById('save-key').onclick = saveApiKey;
         document.getElementById('run').onclick = run;
-        document.getElementById('copy-alternative').onclick = copyToClipboard;
         document.getElementById('last-updated').textContent = `Last updated: ${lastUpdated}`;
-        setupCollapsibles();
     }
 });
-
-function setupCollapsibles() {
-    var coll = document.getElementsByClassName("collapsible");
-    for (var i = 0; i < coll.length; i++) {
-        coll[i].addEventListener("click", function() {
-            this.classList.toggle("active");
-            var content = this.nextElementSibling;
-            if (content.style.display === "block") {
-                content.style.display = "none";
-            } else {
-                content.style.display = "block";
-            }
-        });
-    }
-}
 
 function saveApiKey() {
     apiKey = document.getElementById('api-key').value;
@@ -57,7 +40,6 @@ async function run() {
             
             // Prepare the result area
             setResult('');
-            ensureResultElements();
             
             // Show loading indicator
             document.getElementById('loader').classList.remove('hidden');
@@ -74,20 +56,6 @@ async function run() {
     } catch (error) {
         setResult(`<p><i class='fas fa-exclamation-circle text-red-500 mr-2'></i>Error: ${error.message}</p>`);
     }
-}
-
-function ensureResultElements() {
-    const resultEl = document.getElementById('result');
-    if (!resultEl) return;
-
-    ['visualization', 'summary', 'suggested-changes', 'proposed-alternative'].forEach(id => {
-        if (!document.getElementById(id)) {
-            const div = document.createElement('div');
-            div.id = id;
-            div.className = 'mb-4';
-            resultEl.appendChild(div);
-        }
-    });
 }
 
 function setResult(html) {
@@ -159,52 +127,89 @@ async function reviewParagraph(text, mode) {
 }
 
 function displayReview(review) {
-    const visualizationEl = document.getElementById('visualization');
-    const summaryEl = document.getElementById('summary');
-    const changesEl = document.getElementById('suggested-changes');
-    const alternativeEl = document.getElementById('proposed-alternative');
-    const copyButton = document.getElementById('copy-alternative');
+    const resultEl = document.getElementById('result');
+    if (!resultEl) return;
 
-    if (visualizationEl) {
-        visualizationEl.innerHTML = `
-            <div class="flex justify-between">
-                <div class="tooltip">
-                    <span class="flag ${review.visualization.ofstedOutstanding.score}"></span> Ofsted Outstanding
-                    <span class="tooltiptext">${review.visualization.ofstedOutstanding.reason}</span>
-                </div>
-                <div class="tooltip">
-                    <span class="flag ${review.visualization.tristonePolicy.score}"></span> Tristone Policy
-                    <span class="tooltiptext">${review.visualization.tristonePolicy.reason}</span>
-                </div>
-                <div class="tooltip">
-                    <span class="flag ${review.visualization.readability.score}"></span> Readability
-                    <span class="tooltiptext">${review.visualization.readability.reason}</span>
-                </div>
+    // Clear previous content
+    resultEl.innerHTML = '';
+
+    // Visualization
+    const visualizationEl = document.createElement('div');
+    visualizationEl.className = 'mb-4 p-4 border rounded';
+    visualizationEl.innerHTML = `
+        <div class="flex justify-between">
+            <div class="tooltip">
+                <span class="flag ${review.visualization.ofstedOutstanding.score}"></span> Ofsted Outstanding
+                <span class="tooltiptext">${review.visualization.ofstedOutstanding.reason}</span>
             </div>
-        `;
-    }
+            <div class="tooltip">
+                <span class="flag ${review.visualization.tristonePolicy.score}"></span> Tristone Policy
+                <span class="tooltiptext">${review.visualization.tristonePolicy.reason}</span>
+            </div>
+            <div class="tooltip">
+                <span class="flag ${review.visualization.readability.score}"></span> Readability
+                <span class="tooltiptext">${review.visualization.readability.reason}</span>
+            </div>
+        </div>
+    `;
+    resultEl.appendChild(visualizationEl);
 
-    if (summaryEl) {
-        summaryEl.innerHTML = marked.parse(review.summary);
-    }
-    
-    if (changesEl) {
-        changesEl.innerHTML = marked.parse(review.suggestedChanges.map(change => `- ${change}`).join('\n'));
-    }
-    
-    if (alternativeEl) {
-        alternativeEl.innerHTML = marked.parse(review.proposedAlternative);
-    }
-    
-    if (copyButton) {
-        copyButton.classList.remove('hidden');
+    // Summary
+    const summarySection = createCollapsibleSection('Summary', review.summary);
+    resultEl.appendChild(summarySection);
+
+    // Suggested Changes
+    const changesContent = review.suggestedChanges.map(change => `<li>${change}</li>`).join('');
+    const changesSection = createCollapsibleSection('Suggested Changes', `<ul>${changesContent}</ul>`);
+    resultEl.appendChild(changesSection);
+
+    // Proposed Alternative
+    const alternativeSection = createCollapsibleSection('Proposed Alternative', review.proposedAlternative);
+    resultEl.appendChild(alternativeSection);
+
+    // Copy to Clipboard button
+    const copyButton = document.createElement('button');
+    copyButton.id = 'copy-alternative';
+    copyButton.className = 'bg-blue-500 text-white p-2 rounded hover:bg-blue-600 mt-2';
+    copyButton.innerHTML = '<i class="fas fa-copy mr-2"></i>Copy to Clipboard';
+    copyButton.onclick = copyToClipboard;
+    alternativeSection.querySelector('.content').appendChild(copyButton);
+
+    // Setup collapsible functionality
+    setupCollapsibles();
+}
+
+function createCollapsibleSection(title, content) {
+    const section = document.createElement('div');
+    section.className = 'mb-4';
+    section.innerHTML = `
+        <button class="collapsible">${title}</button>
+        <div class="content">
+            <div class="p-4">${marked.parse(content)}</div>
+        </div>
+    `;
+    return section;
+}
+
+function setupCollapsibles() {
+    var coll = document.getElementsByClassName("collapsible");
+    for (var i = 0; i < coll.length; i++) {
+        coll[i].addEventListener("click", function() {
+            this.classList.toggle("active");
+            var content = this.nextElementSibling;
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
+            }
+        });
     }
 }
 
 function copyToClipboard() {
-    const alternativeEl = document.getElementById('proposed-alternative');
-    if (alternativeEl) {
-        const alternativeText = alternativeEl.textContent;
+    const alternativeContent = document.querySelector('#result .collapsible:nth-child(4) + .content .p-4');
+    if (alternativeContent) {
+        const alternativeText = alternativeContent.textContent;
         navigator.clipboard.writeText(alternativeText).then(() => {
             const copyButton = document.getElementById('copy-alternative');
             if (copyButton) {
