@@ -1,7 +1,7 @@
 let apiKey = '';
 
-// Last updated: 2023-10-04 17:39:00 UTC
-const lastUpdated = "17:39:00 UTC";
+// Last updated: 2023-10-04 18:30:00 UTC
+const lastUpdated = "2023-10-04 18:30:00 UTC";
 
 Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
@@ -64,7 +64,7 @@ function ensureResultElements() {
     const resultEl = document.getElementById('result');
     if (!resultEl) return;
 
-    ['summary', 'suggested-changes', 'proposed-alternative'].forEach(id => {
+    ['visualization', 'summary', 'suggested-changes', 'proposed-alternative'].forEach(id => {
         if (!document.getElementById(id)) {
             const div = document.createElement('div');
             div.id = id;
@@ -95,6 +95,11 @@ async function reviewParagraph(text, mode) {
     Provide a review based on the mode "${mode}". Return your response in the following JSON format, using Markdown for formatting:
     
     {
+      "visualization": {
+        "ofstedOutstanding": {"score": "red|amber|green", "reason": "Brief reason"},
+        "tristonePolicy": {"score": "red|amber|green", "reason": "Brief reason"},
+        "readability": {"score": "red|amber|green", "reason": "Brief reason"}
+      },
       "summary": "A brief summary of the review",
       "suggestedChanges": [
         "Change 1",
@@ -125,6 +130,11 @@ async function reviewParagraph(text, mode) {
     } catch (error) {
         console.error("Error calling OpenAI API:", error);
         return {
+            visualization: {
+                ofstedOutstanding: { score: "red", reason: "Error occurred" },
+                tristonePolicy: { score: "red", reason: "Error occurred" },
+                readability: { score: "red", reason: "Error occurred" }
+            },
             summary: "An error occurred while reviewing the paragraph. Please check your API key and try again.",
             suggestedChanges: [],
             proposedAlternative: ""
@@ -133,10 +143,22 @@ async function reviewParagraph(text, mode) {
 }
 
 function displayReview(review) {
+    const visualizationEl = document.getElementById('visualization');
     const summaryEl = document.getElementById('summary');
     const changesEl = document.getElementById('suggested-changes');
     const alternativeEl = document.getElementById('proposed-alternative');
     const copyButton = document.getElementById('copy-alternative');
+
+    if (visualizationEl) {
+        visualizationEl.innerHTML = `
+            <h3 class="font-bold mb-2">Visualization</h3>
+            <div class="flex flex-col space-y-2">
+                <div><span class="flag ${review.visualization.ofstedOutstanding.score}"></span> Ofsted Outstanding: ${review.visualization.ofstedOutstanding.reason}</div>
+                <div><span class="flag ${review.visualization.tristonePolicy.score}"></span> Tristone Policy: ${review.visualization.tristonePolicy.reason}</div>
+                <div><span class="flag ${review.visualization.readability.score}"></span> Readability: ${review.visualization.readability.reason}</div>
+            </div>
+        `;
+    }
 
     if (summaryEl) {
         summaryEl.innerHTML = marked.parse(`### <i class="fas fa-info-circle text-blue-500 mr-2"></i>Summary\n\n${review.summary}`);
