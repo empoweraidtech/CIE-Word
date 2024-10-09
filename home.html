@@ -82,25 +82,20 @@
 </style>
 </head>
 <body class="bg-gray-100 p-4">
+    <h1>Ofsted SCIFF Review</h1>
     <div id="api-key-input" class="mb-4">
-        <h2 class="text-2xl font-bold mb-2">Ofsted SCIFF Review</h2>
-        <p class="mb-2">Please enter your OpenAI API Key:</p>
+        <p>Please enter your OpenAI API Key:</p>
         <input type="password" id="api-key" placeholder="Enter API Key" class="w-full p-2 mb-2 border rounded">
         <button id="save-key" class="bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
             <i class="fas fa-save mr-2"></i>Save Key
         </button>
     </div>
     <div id="review-section" class="hidden">
-        <h2 class="text-2xl font-bold mb-2">Ofsted SCIFF Review</h2>
-        <p class="mb-2">Select a paragraph in your document and choose a review mode:</p>
-        <select id="review-mode" class="w-full p-2 mb-2 border rounded">
-            <option value="general">General SCIFF Review</option>
-            <option value="improvement">Areas for Improvement</option>
-            <option value="alignment">SCIFF Alignment Check</option>
-        </select>
+        <p>Select a paragraph and click the button to review it against the Ofsted SCIFF framework.</p>
         <button id="run" class="bg-green-500 text-white p-2 rounded hover:bg-green-600 mb-4">
             <i class="fas fa-search mr-2"></i>Review Selected Paragraph
         </button>
+        <button id="review-document">Review Entire Document</button>
         <div id="loader" class="loader hidden mb-4"></div>
         <div id="result" class="bg-white p-4 rounded shadow">
             <div id="visualization" class="mb-4 p-4 border rounded"></div>
