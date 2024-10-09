@@ -7,7 +7,6 @@ Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
         document.getElementById('save-key').onclick = saveApiKey;
         document.getElementById('run').onclick = run;
-        document.getElementById('review-document').onclick = reviewDocument; // Add this line
         document.getElementById('last-updated').textContent = `Last updated: ${lastUpdated}`;
     }
 });
@@ -56,89 +55,6 @@ async function run() {
         });
     } catch (error) {
         setResult(`<p><i class='fas fa-exclamation-circle text-red-500 mr-2'></i>Error: ${error.message}</p>`);
-    }
-}
-
-async function reviewDocument() {
-    if (!apiKey) {
-        document.getElementById('result').innerText = "Please enter your API Key first.";
-        return;
-    }
-
-    try {
-        await Word.run(async (context) => {
-            const body = context.document.body;
-            body.load("text");
-            await context.sync();
-
-            const documentText = body.text;
-            const suggestions = await getSuggestions(documentText);
-            
-            for (const suggestion of suggestions) {
-                const range = body.getRange('Content').search(suggestion.original, { matchCase: true, matchWholeWord: false });
-                range.load("text");
-                await context.sync();
-
-                if (range.items.length > 0) {
-                    const firstRange = range.items[0];
-                    firstRange.insertText(suggestion.suggested, Word.InsertLocation.replace);
-                    firstRange.track();
-                }
-            }
-
-            await context.sync();
-            document.getElementById('result').innerText = "Document reviewed and suggestions added using track changes.";
-        });
-    } catch (error) {
-        document.getElementById('result').innerText = `Error: ${error.message}`;
-    }
-}
-
-async function getSuggestions(text) {
-    const API_CONFIG = {
-        model: 'gpt-4o',
-        apiVersion: '2023-12-01-preview',
-        deploymentName: 'gpt4o',
-        azureEndpoint: 'https://cieuk1.openai.azure.com',
-    };
-
-    const prompt = `
-    Review the following document against Ofsted's SCIFF framework for Outstanding. Provide suggestions for improvement in JSON format:
-
-    Document: "${text}"
-
-    Please structure your response as a JSON array of objects, where each object represents a suggestion:
-    [
-        {
-            "original": "Original text",
-            "suggested": "Suggested improvement",
-            "explanation": "Brief explanation for the change"
-        },
-        ...
-    ]
-    RETURN THE JSON ONLY, NO OTHER TEXT DO NOT ENCLOSE IN '''
-    `;
-
-    try {
-        const response = await axios.post(
-            `${API_CONFIG.azureEndpoint}/openai/deployments/${API_CONFIG.deploymentName}/chat/completions?api-version=${API_CONFIG.apiVersion}`,
-            {
-                messages: [{ role: "user", content: prompt }],
-                temperature: 0.5,
-                max_tokens: 2000
-            },
-            {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'api-key': apiKey
-                }
-            }
-        );
-
-        return JSON.parse(response.data.choices[0].message.content);
-    } catch (error) {
-        console.error("Error calling OpenAI API:", error);
-        throw new Error("An error occurred while reviewing the document. Please check your API key and try again.");
     }
 }
 
