@@ -89,6 +89,10 @@ async function fullPageReview() {
                 const paragraphIndex = comment.paragraphIndex;
                 if (paragraphIndex >= 0 && paragraphIndex < paragraphs.items.length) {
                     const paragraph = paragraphs.items[paragraphIndex];
+                    paragraph.load("text");
+                    await context.sync();
+                    
+                    // Create a comment range for the specific paragraph
                     const commentRange = paragraph.getRange();
                     commentRange.insertComment(comment.text);
                 }
