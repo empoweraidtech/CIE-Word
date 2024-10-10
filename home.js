@@ -7,6 +7,7 @@ Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
         document.getElementById('save-key').onclick = saveApiKey;
         document.getElementById('run').onclick = run;
+        document.getElementById('full-page-review').onclick = fullPageReview;
         document.getElementById('last-updated').textContent = `Last updated: ${lastUpdated}`;
     }
 });
@@ -52,6 +53,28 @@ async function run() {
             
             // Display the review in the sidebar
             displayReview(review);
+        });
+    } catch (error) {
+        setResult(`<p><i class='fas fa-exclamation-circle text-red-500 mr-2'></i>Error: ${error.message}</p>`);
+    }
+}
+
+async function fullPageReview() {
+    if (!apiKey) {
+        setResult("<p><i class='fas fa-exclamation-circle text-red-500 mr-2'></i>Please enter your API Key first.</p>");
+        return;
+    }
+    try {
+        await Word.run(async (context) => {
+            const firstParagraph = context.document.body.paragraphs.getFirst();
+            firstParagraph.load("text");
+            await context.sync();
+
+            const comment = firstParagraph.insertComment("This is a test comment for the full page review.");
+            comment.load("id");
+            await context.sync();
+
+            setResult("<p><i class='fas fa-check-circle text-green-500 mr-2'></i>Added a comment to the first paragraph.</p>");
         });
     } catch (error) {
         setResult(`<p><i class='fas fa-exclamation-circle text-red-500 mr-2'></i>Error: ${error.message}</p>`);
