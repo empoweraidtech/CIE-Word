@@ -45,7 +45,8 @@ async function run() {
             // Show loading indicator
             document.getElementById('loader').classList.remove('hidden');
             
-            const reviewMode = document.getElementById('review-mode').value;
+            // Use a default review mode
+            const reviewMode = "standard";
             const review = await reviewParagraph(selectedText, reviewMode);
             
             // Hide loading indicator
@@ -70,7 +71,11 @@ async function fullPageReview() {
             firstParagraph.load("text");
             await context.sync();
 
-            const comment = firstParagraph.insertComment("This is a test comment for the full page review.");
+            // Create a comment range from the first paragraph
+            const commentRange = firstParagraph.getRange();
+            
+            // Insert the comment on the range
+            const comment = commentRange.insertComment("This is a test comment for the full page review.");
             comment.load("id");
             await context.sync();
 
