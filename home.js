@@ -282,7 +282,7 @@ async function analyzeFullDocument(documentParagraphs) {
         azureEndpoint: 'https://cieuk1.openai.azure.com',
     };
     
-    const prompt = `Analyze the following document paragraphs and identify those that need specific attention, focusing on Tristone policy, Ofsted standards, and readability. Consider the document structure as a whole, including titles and body paragraphs. For each paragraph that needs attention, provide:
+    const prompt = `Analyze the following document paragraphs and identify those that need specific attention, focusing on Tristone policy, Ofsted standards, and readability. Focus on body paragraphs, ignore formatting / title issues / blank spaces. For each paragraph that needs attention, provide:
     1. The index of the paragraph (as provided in the input)
     2. A comment explaining what needs to change and why, considering Tristone policy, Ofsted standards, and readability.
 
@@ -322,4 +322,4 @@ async function analyzeFullDocument(documentParagraphs) {
         console.error("Error calling OpenAI API:", error);
         throw new Error("Failed to analyze the document. Please try again.");
     }
-}s
+}
