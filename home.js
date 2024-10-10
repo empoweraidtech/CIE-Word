@@ -1,7 +1,7 @@
 let apiKey = '';
 
 // Last updated: 2023-10-04 22:30:00 UTC
-const lastUpdated = "2023-10-04 22:30:00 UTC";
+const lastUpdated = "2023-10-10 22:30:00 UTC";
 
 // Add this near the top of your file, after the apiKey declaration
 
@@ -87,6 +87,9 @@ Office.onReady((info) => {
         document.getElementById('run').onclick = run;
         document.getElementById('full-page-review').onclick = fullPageReview;
         document.getElementById('last-updated').textContent = `Last updated: ${lastUpdated}`;
+        
+        // Add event listener for comment clicks
+        Office.context.document.addHandlerAsync(Office.EventType.DocumentSelectionChanged, handleCommentClick);
     }
 });
 
@@ -165,8 +168,12 @@ async function fullPageReview() {
                 if (paragraphIndex >= 0 && paragraphIndex < paragraphs.items.length) {
                     const paragraph = paragraphs.items[paragraphIndex];
                     const commentRange = paragraph.getRange();
-                    const commentText = addPolicyLinks(comment.text, comment.policyReferences);
-                    commentRange.insertComment(commentText);
+                    const commentObject = commentRange.insertComment(comment.text);
+                    commentObject.load("id");
+                    await context.sync();
+                    
+                    // Store the policy references with the comment ID
+                    storeCommentPolicyReferences(commentObject.id, comment.policyReferences);
                 }
             }
 
@@ -179,28 +186,46 @@ async function fullPageReview() {
     }
 }
 
-function addPolicyLinks(commentText, policyReferences) {
+// Global object to store comment policy references
+const commentPolicyReferences = {};
+
+function storeCommentPolicyReferences(commentId, policyReferences) {
+    commentPolicyReferences[commentId] = policyReferences;
+}
+
+async function handleCommentClick() {
+    await Word.run(async (context) => {
+        const selection = context.document.getSelection();
+        const comments = selection.getCommentById();
+        comments.load("id, text");
+        await context.sync();
+
+        if (comments.items.length > 0) {
+            const comment = comments.items[0];
+            const policyReferences = commentPolicyReferences[comment.id];
+            if (policyReferences) {
+                showPolicyDetails(policyReferences);
+            }
+        }
+    });
+}
+
+function showPolicyDetails(policyReferences) {
+    let policyDetailsHtml = '<h3>Related Policies and Standards</h3>';
     policyReferences.forEach(ref => {
         const policy = tristonePolicies[ref] || ofstedStandards[ref];
         if (policy) {
-            const link = `<a href="#" onclick="showPolicyDetails('${ref}'); return false;">${policy.name}</a>`;
-            commentText = commentText.replace(new RegExp(policy.name, 'g'), link);
+            policyDetailsHtml += `
+                <div class="mb-4">
+                    <h4>${policy.name}</h4>
+                    <p>${policy.summary}</p>
+                    <p><a href="${policy.fullPolicyLink || policy.fullStandardLink}" target="_blank">View full policy/standard</a></p>
+                </div>
+            `;
         }
     });
-    return commentText;
-}
-
-function showPolicyDetails(policyRef) {
-    const policy = tristonePolicies[policyRef] || ofstedStandards[policyRef];
-    if (policy) {
-        const policyDetails = `
-            <h3>${policy.name}</h3>
-            <p>${policy.summary}</p>
-            <p><a href="${policy.fullPolicyLink}" target="_blank">View full policy</a></p>
-        `;
-        document.getElementById('policy-details').innerHTML = policyDetails;
-        document.getElementById('policy-details').classList.remove('hidden');
-    }
+    document.getElementById('policy-details').innerHTML = policyDetailsHtml;
+    document.getElementById('policy-details').classList.remove('hidden');
 }
 
 function setResult(html) {
