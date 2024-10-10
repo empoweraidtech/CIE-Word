@@ -67,19 +67,36 @@ async function fullPageReview() {
     }
     try {
         await Word.run(async (context) => {
-            const firstParagraph = context.document.body.paragraphs.getFirst();
-            firstParagraph.load("text");
+            // Get all paragraphs from the document
+            const paragraphs = context.document.body.paragraphs;
+            paragraphs.load("text");
             await context.sync();
 
-            // Create a comment range from the first paragraph
-            const commentRange = firstParagraph.getRange();
-            
-            // Insert the comment on the range
-            const comment = commentRange.insertComment("This is a test comment for the full page review.");
-            comment.load("id");
+            // Prepare the document text for API call
+            const documentText = paragraphs.items.map(p => p.text).join('\n\n');
+
+            // Show loading indicator
+            document.getElementById('loader').classList.remove('hidden');
+
+            // Call OpenAI API
+            const analysis = await analyzeFullDocument(documentText);
+
+            // Hide loading indicator
+            document.getElementById('loader').classList.add('hidden');
+
+            // Process the API response and add comments
+            for (const comment of analysis.comments) {
+                const paragraphIndex = comment.paragraphIndex;
+                if (paragraphIndex >= 0 && paragraphIndex < paragraphs.items.length) {
+                    const paragraph = paragraphs.items[paragraphIndex];
+                    const commentRange = paragraph.getRange();
+                    commentRange.insertComment(comment.text);
+                }
+            }
+
             await context.sync();
 
-            setResult("<p><i class='fas fa-check-circle text-green-500 mr-2'></i>Added a comment to the first paragraph.</p>");
+            setResult(`<p><i class='fas fa-check-circle text-green-500 mr-2'></i>Full page review completed. ${analysis.comments.length} comments added.</p>`);
         });
     } catch (error) {
         setResult(`<p><i class='fas fa-exclamation-circle text-red-500 mr-2'></i>Error: ${error.message}</p>`);
@@ -251,5 +268,55 @@ function copyToClipboard() {
     } else {
         console.error('Alternative content not found');
         alert('Content not found. Please try again.');
+    }
+}
+
+async function analyzeFullDocument(text) {
+    const API_CONFIG = {
+        model: 'gpt-4o',
+        apiVersion: '2023-12-01-preview',
+        deploymentName: 'gpt4o',
+        azureEndpoint: 'https://cieuk1.openai.azure.com',
+    };
+    
+    const prompt = `Analyze the following document text and identify paragraphs that need specific attention, focusing on Tristone policy, Ofsted standards, and readability. Ignore titles and other non-paragraph elements. For each paragraph that needs attention, provide:
+    1. The index of the paragraph (0-based)
+    2. A comment explaining what needs to change and why, considering Tristone policy, Ofsted standards, and readability.
+
+    Document text:
+    ${text}
+
+    Provide your response in the following JSON format:
+    {
+      "comments": [
+        {
+          "paragraphIndex": 0,
+          "text": "Comment text explaining what needs to change and why"
+        },
+        ...
+      ]
+    }
+
+    Ensure the JSON is not enclosed in any code blocks or quotation marks.`;
+    
+    try {
+        const response = await axios.post(
+            `${API_CONFIG.azureEndpoint}/openai/deployments/${API_CONFIG.deploymentName}/chat/completions?api-version=${API_CONFIG.apiVersion}`,
+            {
+                messages: [{ role: "user", content: prompt }],
+                temperature: 0.7,
+                max_tokens: 2000
+            },
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'api-key': apiKey
+                }
+            }
+        );
+        return JSON.parse(response.data.choices[0].message.content);
+    } catch (error) {
+        console.error("Error calling OpenAI API:", error);
+        throw new Error("Failed to analyze the document. Please try again.");
     }
 }
