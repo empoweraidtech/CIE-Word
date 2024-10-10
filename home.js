@@ -72,14 +72,17 @@ async function fullPageReview() {
             paragraphs.load("text");
             await context.sync();
 
-            // Prepare the document text for API call
-            const documentText = paragraphs.items.map(p => p.text).join('\n\n');
+            // Prepare the document text for API call, including paragraph indices
+            const documentParagraphs = paragraphs.items.map((p, index) => ({
+                index: index,
+                text: p.text
+            }));
 
             // Show loading indicator
             document.getElementById('loader').classList.remove('hidden');
 
             // Call OpenAI API
-            const analysis = await analyzeFullDocument(documentText);
+            const analysis = await analyzeFullDocument(documentParagraphs);
 
             // Hide loading indicator
             document.getElementById('loader').classList.add('hidden');
@@ -89,10 +92,6 @@ async function fullPageReview() {
                 const paragraphIndex = comment.paragraphIndex;
                 if (paragraphIndex >= 0 && paragraphIndex < paragraphs.items.length) {
                     const paragraph = paragraphs.items[paragraphIndex];
-                    paragraph.load("text");
-                    await context.sync();
-                    
-                    // Create a comment range for the specific paragraph
                     const commentRange = paragraph.getRange();
                     commentRange.insertComment(comment.text);
                 }
@@ -275,7 +274,7 @@ function copyToClipboard() {
     }
 }
 
-async function analyzeFullDocument(text) {
+async function analyzeFullDocument(documentParagraphs) {
     const API_CONFIG = {
         model: 'gpt-4o',
         apiVersion: '2023-12-01-preview',
@@ -283,12 +282,12 @@ async function analyzeFullDocument(text) {
         azureEndpoint: 'https://cieuk1.openai.azure.com',
     };
     
-    const prompt = `Analyze the following document text and identify paragraphs that need specific attention, focusing on Tristone policy, Ofsted standards, and readability. Ignore titles and other non-paragraph elements. For each paragraph that needs attention, provide:
-    1. The index of the paragraph (0-based)
+    const prompt = `Analyze the following document paragraphs and identify those that need specific attention, focusing on Tristone policy, Ofsted standards, and readability. Ignore titles and other non-paragraph elements. For each paragraph that needs attention, provide:
+    1. The index of the paragraph (as provided in the input)
     2. A comment explaining what needs to change and why, considering Tristone policy, Ofsted standards, and readability.
 
-    Document text:
-    ${text}
+    Document paragraphs:
+    ${JSON.stringify(documentParagraphs)}
 
     Provide your response in the following JSON format:
     {
