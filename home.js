@@ -1,85 +1,7 @@
 let apiKey = '';
 
 // Last updated: 2023-10-04 22:30:00 UTC
-const lastUpdated = "2023-10-10 22:30:00 UTC";
-
-// Add this near the top of your file, after the apiKey declaration
-
-const tristonePolicies = {
-    "TP001": {
-        name: "Child-Centered Approach",
-        summary: "Ensure all practices prioritize the child's needs and well-being.",
-        fullPolicyLink: "https://tristone.org/policies/TP001"
-    },
-    "TP002": {
-        name: "Staff Training and Development",
-        summary: "Regular training programs for all staff members to maintain high standards of care.",
-        fullPolicyLink: "https://tristone.org/policies/TP002"
-    },
-    "TP003": {
-        name: "Safety and Risk Assessment",
-        summary: "Comprehensive risk assessments for all activities and environments.",
-        fullPolicyLink: "https://tristone.org/policies/TP003"
-    },
-    "TP004": {
-        name: "Inclusive Practice",
-        summary: "Ensure equal opportunities and support for all children regardless of background or abilities.",
-        fullPolicyLink: "https://tristone.org/policies/TP004"
-    },
-    "TP005": {
-        name: "Safeguarding Procedures",
-        summary: "Robust procedures to protect children from harm and respond to concerns.",
-        fullPolicyLink: "https://tristone.org/policies/TP005"
-    }
-};
-
-const ofstedStandards = {
-    "OS001": {
-        name: "The overall experiences and progress of children and young people",
-        summary: "Focus on the quality of care and support provided to children.",
-        fullStandardLink: "https://www.gov.uk/government/publications/introduction-to-childrens-homes"
-    },
-    "OS002": {
-        name: "How well children and young people are helped and protected",
-        summary: "Emphasis on safeguarding and risk management practices.",
-        fullStandardLink: "https://www.gov.uk/government/publications/introduction-to-childrens-homes"
-    },
-    "OS003": {
-        name: "The effectiveness of leaders and managers",
-        summary: "Evaluation of leadership and management in improving outcomes for children.",
-        fullStandardLink: "https://www.gov.uk/government/publications/introduction-to-childrens-homes"
-    },
-    "OS004": {
-        name: "Quality of education",
-        summary: "Assessment of the educational provisions and support for children.",
-        fullStandardLink: "https://www.gov.uk/government/publications/education-inspection-framework"
-    },
-    "OS005": {
-        name: "Behaviour and attitudes",
-        summary: "Focus on promoting positive behaviour and attitudes among children.",
-        fullStandardLink: "https://www.gov.uk/government/publications/education-inspection-framework"
-    },
-    "OS006": {
-        name: "Personal development",
-        summary: "Evaluation of support for children's personal growth and development.",
-        fullStandardLink: "https://www.gov.uk/government/publications/education-inspection-framework"
-    },
-    "OS007": {
-        name: "Leadership and management",
-        summary: "Assessment of the effectiveness of leadership in driving improvements.",
-        fullStandardLink: "https://www.gov.uk/government/publications/education-inspection-framework"
-    },
-    "OS008": {
-        name: "Overall effectiveness",
-        summary: "Overall evaluation of the quality of care and support provided.",
-        fullStandardLink: "https://www.gov.uk/government/publications/education-inspection-framework"
-    },
-    "OS009": {
-        name: "The experiences and progress of children and young people",
-        summary: "Focus on the outcomes and experiences of children in care.",
-        fullStandardLink: "https://www.gov.uk/government/publications/inspecting-childrens-homes-framework"
-    }
-};
+const lastUpdated = "2023-10-04 22:30:00 UTC";
 
 Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
@@ -87,9 +9,6 @@ Office.onReady((info) => {
         document.getElementById('run').onclick = run;
         document.getElementById('full-page-review').onclick = fullPageReview;
         document.getElementById('last-updated').textContent = `Last updated: ${lastUpdated}`;
-        
-        // Add event listener for comment clicks
-        Office.context.document.addHandlerAsync(Office.EventType.DocumentSelectionChanged, handleCommentClick);
     }
 });
 
@@ -148,32 +67,33 @@ async function fullPageReview() {
     }
     try {
         await Word.run(async (context) => {
+            // Get all paragraphs from the document
             const paragraphs = context.document.body.paragraphs;
             paragraphs.load("text");
             await context.sync();
 
+            // Prepare the document text for API call, including paragraph indices
             const documentParagraphs = paragraphs.items.map((p, index) => ({
                 index: index,
                 text: p.text
             }));
 
+            // Show loading indicator
             document.getElementById('loader').classList.remove('hidden');
 
+            // Call OpenAI API
             const analysis = await analyzeFullDocument(documentParagraphs);
 
+            // Hide loading indicator
             document.getElementById('loader').classList.add('hidden');
 
+            // Process the API response and add comments
             for (const comment of analysis.comments) {
                 const paragraphIndex = comment.paragraphIndex;
                 if (paragraphIndex >= 0 && paragraphIndex < paragraphs.items.length) {
                     const paragraph = paragraphs.items[paragraphIndex];
                     const commentRange = paragraph.getRange();
-                    const commentObject = commentRange.insertComment(comment.text);
-                    commentObject.load("id");
-                    await context.sync();
-                    
-                    // Store the policy references with the comment ID
-                    storeCommentPolicyReferences(commentObject.id, comment.policyReferences);
+                    commentRange.insertComment(comment.text);
                 }
             }
 
@@ -184,48 +104,6 @@ async function fullPageReview() {
     } catch (error) {
         setResult(`<p><i class='fas fa-exclamation-circle text-red-500 mr-2'></i>Error: ${error.message}</p>`);
     }
-}
-
-// Global object to store comment policy references
-const commentPolicyReferences = {};
-
-function storeCommentPolicyReferences(commentId, policyReferences) {
-    commentPolicyReferences[commentId] = policyReferences;
-}
-
-async function handleCommentClick() {
-    await Word.run(async (context) => {
-        const selection = context.document.getSelection();
-        const comments = selection.getCommentById();
-        comments.load("id, text");
-        await context.sync();
-
-        if (comments.items.length > 0) {
-            const comment = comments.items[0];
-            const policyReferences = commentPolicyReferences[comment.id];
-            if (policyReferences) {
-                showPolicyDetails(policyReferences);
-            }
-        }
-    });
-}
-
-function showPolicyDetails(policyReferences) {
-    let policyDetailsHtml = '<h3>Related Policies and Standards</h3>';
-    policyReferences.forEach(ref => {
-        const policy = tristonePolicies[ref] || ofstedStandards[ref];
-        if (policy) {
-            policyDetailsHtml += `
-                <div class="mb-4">
-                    <h4>${policy.name}</h4>
-                    <p>${policy.summary}</p>
-                    <p><a href="${policy.fullPolicyLink || policy.fullStandardLink}" target="_blank">View full policy/standard</a></p>
-                </div>
-            `;
-        }
-    });
-    document.getElementById('policy-details').innerHTML = policyDetailsHtml;
-    document.getElementById('policy-details').classList.remove('hidden');
 }
 
 function setResult(html) {
@@ -404,16 +282,9 @@ async function analyzeFullDocument(documentParagraphs) {
         azureEndpoint: 'https://cieuk1.openai.azure.com',
     };
     
-    const prompt = `Analyze the following document paragraphs and identify those that need specific attention, focusing on Tristone policy, Ofsted standards, and readability. Focus on body paragraphs, ignore formatting / title issues / blank spaces. For each paragraph that needs attention, provide:
+    const prompt = `Analyze the following document paragraphs and identify those that need specific attention, focusing on Tristone policy, Ofsted standards, and readability. Consider the document structure as a whole, including titles and body paragraphs. For each paragraph that needs attention, provide:
     1. The index of the paragraph (as provided in the input)
     2. A comment explaining what needs to change and why, considering Tristone policy, Ofsted standards, and readability.
-    3. References to specific Tristone policies (TP001-TP005) or Ofsted standards (OS001-OS009) that are relevant.
-
-    Tristone Policies:
-    ${JSON.stringify(tristonePolicies)}
-
-    Ofsted Standards:
-    ${JSON.stringify(ofstedStandards)}
 
     Document paragraphs:
     ${JSON.stringify(documentParagraphs)}
@@ -423,8 +294,7 @@ async function analyzeFullDocument(documentParagraphs) {
       "comments": [
         {
           "paragraphIndex": 0,
-          "text": "Comment text explaining what needs to change and why",
-          "policyReferences": ["TP001", "OS002"]
+          "text": "Comment text explaining what needs to change and why"
         },
         ...
       ]
@@ -452,4 +322,4 @@ async function analyzeFullDocument(documentParagraphs) {
         console.error("Error calling OpenAI API:", error);
         throw new Error("Failed to analyze the document. Please try again.");
     }
-}
+}s
