@@ -203,17 +203,25 @@ function setupCollapsibles() {
 }
 
 function copyToClipboard() {
-    const alternativeContent = document.querySelector('#result .collapsible:nth-child(4) + .content .p-4');
+    const alternativeContent = document.querySelector('#result .content:nth-of-type(3) .p-4');
     if (alternativeContent) {
         const alternativeText = alternativeContent.textContent;
-        navigator.clipboard.writeText(alternativeText).then(() => {
-            const copyButton = document.getElementById('copy-alternative');
-            if (copyButton) {
-                copyButton.innerHTML = '<i class="fas fa-check mr-2"></i>Copied!';
-                setTimeout(() => {
-                    copyButton.innerHTML = '<i class="fas fa-copy mr-2"></i>Copy to Clipboard';
-                }, 2000);
-            }
-        });
+        navigator.clipboard.writeText(alternativeText)
+            .then(() => {
+                const copyButton = document.getElementById('copy-alternative');
+                if (copyButton) {
+                    copyButton.innerHTML = '<i class="fas fa-check mr-2"></i>Copied!';
+                    setTimeout(() => {
+                        copyButton.innerHTML = '<i class="fas fa-copy mr-2"></i>Copy to Clipboard';
+                    }, 2000);
+                }
+            })
+            .catch(err => {
+                console.error('Failed to copy text: ', err);
+                alert('Failed to copy text. Please try again.');
+            });
+    } else {
+        console.error('Alternative content not found');
+        alert('Content not found. Please try again.');
     }
 }
