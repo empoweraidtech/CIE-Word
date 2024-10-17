@@ -72,42 +72,23 @@ async function fillDocument(pdfText) {
     try {
         await Word.run(async (context) => {
             const document = context.document;
-            document.load("sections");
+            const body = document.body;
+            body.load("paragraphs,tables");
             await context.sync();
 
-            if (!document.sections) {
-                throw new Error("Unable to access document sections");
-            }
-
-            const sections = document.sections;
-            sections.load("items");
-            await context.sync();
-
-            if (!sections.items || sections.items.length === 0) {
-                throw new Error("No sections found in the document");
-            }
-
-            const documentStructure = [];
-            for (let i = 0; i < sections.items.length; i++) {
-                const sectionBody = sections.items[i].body;
-                sectionBody.load("text");
-                await context.sync();
-                documentStructure.push({
-                    index: i,
-                    text: sectionBody.text
-                });
-            }
-
+            const documentStructure = await analyzeDocumentStructure(body);
             console.log("Document structure:", JSON.stringify(documentStructure, null, 2));
 
             const filledContent = await analyzeAndFillDocument(documentStructure, pdfText);
 
-            for (const section of filledContent) {
-                if (sections.items[section.index]) {
-                    const range = sections.items[section.index].body.getRange();
-                    range.insertText(section.filledText, Word.InsertLocation.replace);
-                } else {
-                    console.warn(`Section with index ${section.index} not found`);
+            for (const item of filledContent) {
+                if (item.type === 'paragraph') {
+                    const paragraph = body.paragraphs.getItem(item.index);
+                    paragraph.insertParagraph(item.filledText, Word.InsertLocation.after);
+                } else if (item.type === 'table') {
+                    const table = body.tables.getItem(item.tableIndex);
+                    const cell = table.getCell(item.rowIndex, item.columnIndex);
+                    cell.body.insertParagraph(item.filledText, Word.InsertLocation.replace);
                 }
             }
 
@@ -120,6 +101,51 @@ async function fillDocument(pdfText) {
     }
 }
 
+async function analyzeDocumentStructure(body) {
+    const structure = [];
+    let paragraphIndex = 0;
+    let tableIndex = 0;
+
+    for (let i = 0; i < body.paragraphs.items.length; i++) {
+        const paragraph = body.paragraphs.items[i];
+        paragraph.load("text,style");
+        await paragraph.context.sync();
+
+        structure.push({
+            type: 'paragraph',
+            index: paragraphIndex,
+            text: paragraph.text,
+            style: paragraph.style
+        });
+        paragraphIndex++;
+    }
+
+    for (let i = 0; i < body.tables.items.length; i++) {
+        const table = body.tables.items[i];
+        table.load("rowCount,columnCount");
+        await table.context.sync();
+
+        for (let row = 0; row < table.rowCount; row++) {
+            for (let col = 0; col < table.columnCount; col++) {
+                const cell = table.getCell(row, col);
+                cell.load("body");
+                await cell.context.sync();
+
+                structure.push({
+                    type: 'table',
+                    tableIndex: tableIndex,
+                    rowIndex: row,
+                    columnIndex: col,
+                    text: cell.body.text
+                });
+            }
+        }
+        tableIndex++;
+    }
+
+    return structure;
+}
+
 async function analyzeAndFillDocument(documentStructure, pdfText) {
     const API_CONFIG = {
         model: 'gpt-4o',
@@ -128,7 +154,7 @@ async function analyzeAndFillDocument(documentStructure, pdfText) {
         azureEndpoint: 'https://cieuk1.openai.azure.com',
     };
     
-    const prompt = `Analyze the following document structure and PDF content. Fill each section of the document with relevant information from the PDF. If a section doesn't have relevant information, leave it as is.
+    const prompt = `Analyze the following document structure and PDF content. Fill each section of the document with relevant information from the PDF. If a section doesn't have relevant information, leave it empty.
 
     Document structure:
     ${JSON.stringify(documentStructure)}
@@ -139,17 +165,26 @@ async function analyzeAndFillDocument(documentStructure, pdfText) {
     Provide your response in the following JSON format:
     [
       {
+        "type": "paragraph",
         "index": 0,
-        "filledText": "Filled content for section 0"
+        "filledText": "Filled content for paragraph 0"
       },
       {
-        "index": 1,
-        "filledText": "Filled content for section 1"
+        "type": "table",
+        "tableIndex": 0,
+        "rowIndex": 0,
+        "columnIndex": 0,
+        "filledText": "Filled content for table 0, cell (0,0)"
       },
       ...
     ]
 
-    Ensure the JSON is not enclosed in any code blocks or quotation marks.`;
+    Rules:
+    1. Do not modify existing text. Only add new content.
+    2. For paragraphs, insert the new content after the existing paragraph.
+    3. For table cells, replace the existing content with the new content.
+    4. If no relevant information is found for a section, set "filledText" to an empty string.
+    5. Ensure the JSON is not enclosed in any code blocks or quotation marks.`;
     
     try {
         const response = await axios.post(
