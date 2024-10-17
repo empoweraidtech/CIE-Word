@@ -83,12 +83,20 @@ async function fillDocument(pdfText) {
 
             for (const item of filledContent) {
                 if (item.type === 'paragraph') {
-                    const paragraph = body.paragraphs.getItem(item.index);
-                    paragraph.insertParagraph(item.filledText, Word.InsertLocation.after);
+                    // Find the paragraph by its index
+                    const paragraphs = body.paragraphs.items;
+                    if (item.index < paragraphs.length) {
+                        const paragraph = paragraphs[item.index];
+                        paragraph.insertParagraph(item.filledText, Word.InsertLocation.after);
+                    }
                 } else if (item.type === 'table') {
-                    const table = body.tables.getItem(item.tableIndex);
-                    const cell = table.getCell(item.rowIndex, item.columnIndex);
-                    cell.body.insertParagraph(item.filledText, Word.InsertLocation.replace);
+                    // Find the table by its index
+                    const tables = body.tables.items;
+                    if (item.tableIndex < tables.length) {
+                        const table = tables[item.tableIndex];
+                        const cell = table.getCell(item.rowIndex, item.columnIndex);
+                        cell.body.insertParagraph(item.filledText, Word.InsertLocation.replace);
+                    }
                 }
             }
 
@@ -105,6 +113,9 @@ async function analyzeDocumentStructure(body) {
     const structure = [];
     let paragraphIndex = 0;
     let tableIndex = 0;
+
+    body.load("paragraphs,tables");
+    await body.context.sync();
 
     for (let i = 0; i < body.paragraphs.items.length; i++) {
         const paragraph = body.paragraphs.items[i];
