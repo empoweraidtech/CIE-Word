@@ -73,7 +73,7 @@ async function fillDocument(pdfText) {
         await Word.run(async (context) => {
             const document = context.document;
             const body = document.body;
-            body.load("paragraphs,tables");
+            body.load("paragraphs,tables,font");
             await context.sync();
 
             const documentStructure = await analyzeDocumentStructure(body);
@@ -83,19 +83,21 @@ async function fillDocument(pdfText) {
 
             for (const item of filledContent) {
                 if (item.type === 'paragraph') {
-                    // Find the paragraph by its index
                     const paragraphs = body.paragraphs.items;
                     if (item.index < paragraphs.length) {
                         const paragraph = paragraphs[item.index];
-                        paragraph.insertParagraph(item.filledText, Word.InsertLocation.after);
+                        const newParagraph = paragraph.insertParagraph(item.filledText, Word.InsertLocation.after);
+                        newParagraph.font.set(body.font);
                     }
                 } else if (item.type === 'table') {
-                    // Find the table by its index
                     const tables = body.tables.items;
                     if (item.tableIndex < tables.length) {
                         const table = tables[item.tableIndex];
                         const cell = table.getCell(item.rowIndex, item.columnIndex);
-                        cell.body.insertParagraph(item.filledText, Word.InsertLocation.replace);
+                        const newRow = table.insertRow(item.rowIndex + 1, Word.InsertLocation.after);
+                        const newCell = newRow.getCell(item.columnIndex);
+                        newCell.body.insertParagraph(item.filledText, Word.InsertLocation.replace);
+                        newCell.body.font.set(body.font);
                     }
                 }
             }
@@ -165,7 +167,7 @@ async function analyzeAndFillDocument(documentStructure, pdfText) {
         azureEndpoint: 'https://cieuk1.openai.azure.com',
     };
     
-    const prompt = `Analyze the following document structure and PDF content. Fill each section of the document with relevant information from the PDF. If a section doesn't have relevant information, leave it empty.
+    const prompt = `Analyze the following document structure and PDF content. Fill each section of the document with relevant information from the PDF. If a section doesn't have relevant information, use the phrase 'No relevant information found in the document'.
 
     Document structure:
     ${JSON.stringify(documentStructure)}
@@ -193,9 +195,10 @@ async function analyzeAndFillDocument(documentStructure, pdfText) {
     Rules:
     1. Do not modify existing text. Only add new content.
     2. For paragraphs, insert the new content after the existing paragraph.
-    3. For table cells, replace the existing content with the new content.
-    4. If no relevant information is found for a section, set "filledText" to an empty string.
-    5. Ensure the JSON is not enclosed in any code blocks or quotation marks.`;
+    3. For table cells, provide content to be inserted in a new row below the current cell.
+    4. If no relevant information is found for a section, set "filledText" to "No relevant information found in the document".
+    5. Use actual line breaks instead of \\n for new lines.
+    6. Ensure the JSON is not enclosed in any code blocks or quotation marks.`;
     
     try {
         const response = await axios.post(
