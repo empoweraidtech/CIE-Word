@@ -69,33 +69,55 @@ async function parsePdf(file) {
 }
 
 async function fillDocument(pdfText) {
-    await Word.run(async (context) => {
-        const document = context.document;
-        const sections = document.sections;
-        sections.load("body");
-        await context.sync();
-
-        const documentStructure = [];
-        for (let i = 0; i < sections.items.length; i++) {
-            const sectionBody = sections.items[i].body;
-            sectionBody.load("text");
+    try {
+        await Word.run(async (context) => {
+            const document = context.document;
+            document.load("sections");
             await context.sync();
-            documentStructure.push({
-                index: i,
-                text: sectionBody.text
-            });
-        }
 
-        const filledContent = await analyzeAndFillDocument(documentStructure, pdfText);
+            if (!document.sections) {
+                throw new Error("Unable to access document sections");
+            }
 
-        for (const section of filledContent) {
-            const range = sections.items[section.index].body.getRange();
-            range.insertText(section.filledText, Word.InsertLocation.replace);
-        }
+            const sections = document.sections;
+            sections.load("items");
+            await context.sync();
 
-        await context.sync();
-        setResult("<p><i class='fas fa-check-circle text-green-500 mr-2'></i>Document filled successfully.</p>");
-    });
+            if (!sections.items || sections.items.length === 0) {
+                throw new Error("No sections found in the document");
+            }
+
+            const documentStructure = [];
+            for (let i = 0; i < sections.items.length; i++) {
+                const sectionBody = sections.items[i].body;
+                sectionBody.load("text");
+                await context.sync();
+                documentStructure.push({
+                    index: i,
+                    text: sectionBody.text
+                });
+            }
+
+            console.log("Document structure:", JSON.stringify(documentStructure, null, 2));
+
+            const filledContent = await analyzeAndFillDocument(documentStructure, pdfText);
+
+            for (const section of filledContent) {
+                if (sections.items[section.index]) {
+                    const range = sections.items[section.index].body.getRange();
+                    range.insertText(section.filledText, Word.InsertLocation.replace);
+                } else {
+                    console.warn(`Section with index ${section.index} not found`);
+                }
+            }
+
+            await context.sync();
+            setResult("<p><i class='fas fa-check-circle text-green-500 mr-2'></i>Document filled successfully.</p>");
+        });
+    } catch (error) {
+        console.error("Error in fillDocument:", error);
+        setResult(`<p><i class='fas fa-exclamation-circle text-red-500 mr-2'></i>Error: ${error.message}</p>`);
+    }
 }
 
 async function analyzeAndFillDocument(documentStructure, pdfText) {
