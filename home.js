@@ -1,7 +1,7 @@
 let apiKey = '';
 
 // Last updated: 2023-10-04 22:30:00 UTC
-const lastUpdated = "2023-10-04 22:30:00 UTC";
+const lastUpdated = "2023-10-18 09:30:00 UTC";
 
 Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
