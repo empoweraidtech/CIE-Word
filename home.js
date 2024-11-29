@@ -282,25 +282,55 @@ async function analyzeFullDocument(documentParagraphs) {
         azureEndpoint: 'https://cieuk1.openai.azure.com',
     };
     
-    const prompt = `Analyze the following document paragraphs and identify those that need specific attention, focusing on Tristone policy, Ofsted standards, and readability. Consider the document structure as a whole, including titles and body paragraphs. Empty paragraphs don't need comments! For each paragraph that needs attention, provide:
-    1. The index of the paragraph (as provided in the input)
-    2. A comment explaining what needs to change and why, considering Tristone policy, Ofsted standards, and readability.
+    const prompt = `Analyze the following document paragraphs for inconsistencies, errors, and quality issues. For each paragraph, examine:
 
-    Document paragraphs:
-    ${JSON.stringify(documentParagraphs)}
+1. Timeline and Chronological Issues
+- Events occurring in impossible orders
+- Inconsistent date formats
+- Future dates in historical sections
+- Illogical sequence of interventions
 
-    Provide your response in the following JSON format:
+2. Personal Information
+- Name spelling variations
+- Address inconsistencies
+- Living arrangement contradictions
+- Pronoun inconsistencies
+- Contradictory family relationships
+
+3. Clinical Details
+- Medical condition spelling errors
+- Treatment timeline inconsistencies
+- Facility name inconsistencies
+- Healthcare provider reference errors
+- Medication inconsistencies
+
+4. Support and Care Information
+- Contradictory support frequencies
+- Inconsistent caregiver arrangements
+- Contradictory independence levels
+- Care package inconsistencies
+
+5. Quality Standards
+- Readability issues
+- Structural problems
+
+Document paragraphs:
+${JSON.stringify(documentParagraphs)}
+
+Provide your response in EXACTLY this JSON format:
+{
+  "comments": [
     {
-      "comments": [
-        {
-          "paragraphIndex": 0,
-          "text": "Comment text explaining what needs to change and why"
-        },
-        ...
-      ]
+      "paragraphIndex": 0,
+      "text": "Comment text explaining what needs to change and why"
     }
+  ]
+}
 
-    Ensure the JSON is not enclosed in any code blocks or quotation marks.`;
+In the "text" field, structure each comment as:
+[Category]: Issue found - Explanation - Suggested correction
+
+Empty paragraphs don't need comments! Ensure the JSON matches this exact structure.`;
     
     try {
         const response = await axios.post(
